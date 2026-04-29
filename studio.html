@@ -1,0 +1,999 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI 图像工作台</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1b2430;
+      --muted: #667085;
+      --line: #d9e0e8;
+      --panel: #ffffff;
+      --paper: #f5f7fa;
+      --accent: #0f766e;
+      --accent-2: #b42318;
+      --gold: #b7791f;
+      --focus: rgba(15, 118, 110, .18);
+      --shadow: 0 18px 40px rgba(28, 37, 49, .12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(15, 118, 110, .08), transparent 32%),
+        linear-gradient(315deg, rgba(180, 35, 24, .07), transparent 30%),
+        var(--paper);
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 390px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      padding: 28px;
+      border-right: 1px solid var(--line);
+      background: rgba(255, 255, 255, .86);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .logo {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      place-items: center;
+      border-radius: 8px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), #174ea6);
+      box-shadow: 0 10px 24px rgba(15, 118, 110, .22);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #eef2f6;
+    }
+
+    .tab {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      border-radius: 6px;
+      color: var(--muted);
+      background: transparent;
+      font-weight: 700;
+    }
+
+    .tab.active {
+      color: var(--ink);
+      background: #fff;
+      box-shadow: 0 5px 14px rgba(28, 37, 49, .08);
+    }
+
+    .panel {
+      margin-top: 18px;
+    }
+
+    .field {
+      margin-top: 16px;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      color: #344054;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    textarea, input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--ink);
+      background: #fff;
+      outline: none;
+      transition: border-color .16s ease, box-shadow .16s ease;
+    }
+
+    textarea {
+      min-height: 136px;
+      resize: vertical;
+      padding: 13px 14px;
+      line-height: 1.55;
+    }
+
+    input, select {
+      height: 42px;
+      padding: 0 12px;
+    }
+
+    textarea:focus, input:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--focus);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .upload {
+      display: grid;
+      min-height: 190px;
+      place-items: center;
+      border: 1.5px dashed #a7b3c2;
+      border-radius: 8px;
+      background: #f8fafc;
+      text-align: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .upload input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      height: auto;
+    }
+
+    .upload img {
+      display: none;
+      width: 100%;
+      height: 240px;
+      object-fit: cover;
+    }
+
+    .upload.has-image .upload-copy {
+      display: none;
+    }
+
+    .upload.has-image img {
+      display: block;
+    }
+
+    .upload-copy {
+      padding: 24px;
+    }
+
+    .upload-copy strong {
+      display: block;
+      margin-top: 10px;
+      font-size: 15px;
+    }
+
+    .upload-copy span {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .slider-row {
+      display: grid;
+      grid-template-columns: 1fr 54px;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type="range"] {
+      padding: 0;
+      accent-color: var(--accent);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 48px;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .primary, .icon-button, .ghost {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      min-height: 46px;
+      border-radius: 8px;
+      font-weight: 800;
+    }
+
+    .primary {
+      color: #fff;
+      background: var(--accent);
+      box-shadow: 0 12px 26px rgba(15, 118, 110, .24);
+    }
+
+    .primary:disabled {
+      cursor: wait;
+      opacity: .7;
+    }
+
+    .icon-button, .ghost {
+      color: var(--ink);
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      padding: 28px;
+      min-width: 0;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 0 5px rgba(183, 121, 31, .14);
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+    }
+
+    .canvas-wrap {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 18px;
+      min-height: 0;
+    }
+
+    .stage {
+      display: grid;
+      min-height: 560px;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(45deg, #e9eef4 25%, transparent 25%),
+        linear-gradient(-45deg, #e9eef4 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #e9eef4 75%),
+        linear-gradient(-45deg, transparent 75%, #e9eef4 75%),
+        #f8fafc;
+      background-size: 28px 28px;
+      background-position: 0 0, 0 14px, 14px -14px, -14px 0;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    canvas {
+      max-width: min(92%, 960px);
+      max-height: 82vh;
+      width: auto;
+      height: auto;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 24px 60px rgba(20, 28, 38, .22);
+    }
+
+    .empty {
+      max-width: 410px;
+      padding: 30px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .empty svg {
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .empty strong {
+      display: block;
+      color: var(--ink);
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .history {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .9);
+      overflow: hidden;
+    }
+
+    .history-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .history-head h2 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .thumbs {
+      display: grid;
+      gap: 12px;
+      max-height: calc(100vh - 126px);
+      overflow: auto;
+      padding: 14px;
+    }
+
+    .thumb {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .thumb img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+    }
+
+    .thumb figcaption {
+      padding: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%) translateY(18px);
+      padding: 11px 14px;
+      border-radius: 8px;
+      color: #fff;
+      background: #263241;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+      box-shadow: 0 14px 34px rgba(28, 37, 49, .22);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 1040px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .canvas-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .thumbs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-height: none;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .sidebar, .workspace {
+        padding: 18px;
+      }
+
+      .grid-2, .actions {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .stage {
+        min-height: 380px;
+      }
+
+      .thumbs {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12.5 9.5 17 19 6.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <h1>AI 图像工作台</h1>
+          <p class="subtitle">文生图 / 图生图单页控制台</p>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="生成模式">
+        <button class="tab active" id="textTab" type="button" role="tab" aria-selected="true">
+          <span aria-hidden="true">✦</span> 文生图
+        </button>
+        <button class="tab" id="imageTab" type="button" role="tab" aria-selected="false">
+          <span aria-hidden="true">◈</span> 图生图
+        </button>
+      </div>
+
+      <section class="panel" aria-label="生成参数">
+        <div class="field image-only hidden">
+          <label for="sourceImage">参考图片 <span class="hint">PNG / JPG</span></label>
+          <div class="upload" id="dropZone">
+            <input id="sourceImage" type="file" accept="image/png,image/jpeg,image/webp">
+            <img id="sourcePreview" alt="参考图预览">
+            <div class="upload-copy">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 16V4m0 0 4.5 4.5M12 4 7.5 8.5M4 17.5V19a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <strong>上传参考图片</strong>
+              <span>点击或拖拽图片到这里</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="prompt">提示词 <span class="hint" id="promptCount">0 字</span></label>
+          <textarea id="prompt" placeholder="例如：一间清晨阳光里的现代咖啡馆，吧台上有手冲咖啡器具，电影感构图，真实摄影，高细节"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="negative">反向提示词 <span class="hint">可选</span></label>
+          <input id="negative" placeholder="低清晰度、变形、文字、水印">
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="style">风格</label>
+            <select id="style">
+              <option>真实摄影</option>
+              <option>产品海报</option>
+              <option>动漫插画</option>
+              <option>水彩</option>
+              <option>赛博朋克</option>
+              <option>极简平面</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="ratio">比例</label>
+            <select id="ratio">
+              <option value="1:1">1:1</option>
+              <option value="4:3">4:3</option>
+              <option value="3:4">3:4</option>
+              <option value="16:9">16:9</option>
+              <option value="9:16">9:16</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="strength">创意强度 <span class="hint" id="strengthValue">70</span></label>
+          <div class="slider-row">
+            <input id="strength" type="range" min="0" max="100" value="70">
+            <input id="strengthNumber" type="number" min="0" max="100" value="70">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="model">模型</label>
+            <select id="model">
+              <option>Image Studio Mock</option>
+              <option>OpenAI Images</option>
+              <option>Stable Diffusion</option>
+              <option>Midjourney Proxy</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="count">数量</label>
+            <select id="count">
+              <option value="1">1 张</option>
+              <option value="2">2 张</option>
+              <option value="4">4 张</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="endpoint">接口地址 <span class="hint">可接后端</span></label>
+          <input id="endpoint" placeholder="https://your-api.example.com/generate">
+        </div>
+
+        <div class="actions">
+          <button class="primary" id="generateBtn" type="button">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="m12 3 1.6 5.1L19 10l-5.4 1.9L12 17l-1.6-5.1L5 10l5.4-1.9L12 3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <path d="m19 16 .7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+            开始生成
+          </button>
+          <button class="icon-button" id="clearBtn" type="button" title="清空">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M3 6h18M8 6V4h8v2m-9 4 1 10h8l1-10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </section>
+    </aside>
+
+    <section class="workspace">
+      <div class="topbar">
+        <div class="status">
+          <span class="dot" id="statusDot"></span>
+          <span id="statusText">等待创作指令</span>
+        </div>
+        <div class="toolbar">
+          <button class="ghost" id="homeBtn" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+            首页
+          </button>
+          <button class="ghost" id="downloadBtn" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 19h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            下载
+          </button>
+          <button class="ghost" id="copyBtn" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M9 9h10v10H9zM5 15H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+            复制提示词
+          </button>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="stage">
+          <div class="empty" id="emptyState">
+            <svg width="54" height="54" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Z" stroke="currentColor" stroke-width="2"/>
+              <path d="m4 16 4.5-4.5a2 2 0 0 1 2.8 0L20 20M14 13l1.2-1.2a2 2 0 0 1 2.8 0L20 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M8 8h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <strong>生成结果会显示在这里</strong>
+            <span>填写提示词后点击开始生成。若填入接口地址，会向你的后端发送请求；否则使用本地预览生成器。</span>
+          </div>
+          <canvas id="canvas" class="hidden" width="1024" height="1024"></canvas>
+        </div>
+
+        <aside class="history">
+          <div class="history-head">
+            <h2>历史结果</h2>
+            <button class="icon-button" id="clearHistory" type="button" title="清空历史" style="min-height:34px;width:34px;border-radius:7px;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="thumbs" id="thumbs"></div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const state = {
+      mode: "text",
+      sourceImage: null,
+      lastDataUrl: "",
+      history: []
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const textTab = $("textTab");
+    const imageTab = $("imageTab");
+    const prompt = $("prompt");
+    const promptCount = $("promptCount");
+    const strength = $("strength");
+    const strengthNumber = $("strengthNumber");
+    const strengthValue = $("strengthValue");
+    const generateBtn = $("generateBtn");
+    const canvas = $("canvas");
+    const ctx = canvas.getContext("2d");
+    const emptyState = $("emptyState");
+    const statusText = $("statusText");
+    const statusDot = $("statusDot");
+    const sourceImage = $("sourceImage");
+    const sourcePreview = $("sourcePreview");
+    const dropZone = $("dropZone");
+    const thumbs = $("thumbs");
+    const toast = $("toast");
+
+    function setMode(mode) {
+      state.mode = mode;
+      textTab.classList.toggle("active", mode === "text");
+      imageTab.classList.toggle("active", mode === "image");
+      textTab.setAttribute("aria-selected", mode === "text");
+      imageTab.setAttribute("aria-selected", mode === "image");
+      document.querySelectorAll(".image-only").forEach((el) => el.classList.toggle("hidden", mode !== "image"));
+      setStatus(mode === "text" ? "文生图模式已就绪" : "图生图模式已就绪", "ready");
+    }
+
+    function setStatus(text, type = "ready") {
+      statusText.textContent = text;
+      const color = type === "busy" ? "#174ea6" : type === "error" ? "#b42318" : "#b7791f";
+      statusDot.style.background = color;
+      statusDot.style.boxShadow = `0 0 0 5px ${hexToRgba(color, .14)}`;
+    }
+
+    function hexToRgba(hex, alpha) {
+      const value = hex.replace("#", "");
+      const r = parseInt(value.slice(0, 2), 16);
+      const g = parseInt(value.slice(2, 4), 16);
+      const b = parseInt(value.slice(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 1800);
+    }
+
+    function syncStrength(value) {
+      const clamped = Math.max(0, Math.min(100, Number(value) || 0));
+      strength.value = clamped;
+      strengthNumber.value = clamped;
+      strengthValue.textContent = clamped;
+    }
+
+    function getCanvasSize() {
+      const ratio = $("ratio").value;
+      const [w, h] = ratio.split(":").map(Number);
+      const base = 1024;
+      if (w === h) return [base, base];
+      if (w > h) return [base, Math.round(base * h / w)];
+      return [Math.round(base * w / h), base];
+    }
+
+    function hashText(text) {
+      let hash = 0;
+      for (let i = 0; i < text.length; i += 1) {
+        hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
+      }
+      return Math.abs(hash);
+    }
+
+    function seededColor(seed, shift) {
+      const hue = (seed * 37 + shift) % 360;
+      return `hsl(${hue}, 58%, 52%)`;
+    }
+
+    async function drawGeneratedImage(index = 0) {
+      const [width, height] = getCanvasSize();
+      canvas.width = width;
+      canvas.height = height;
+      const text = prompt.value.trim() || "未命名创作";
+      const seed = hashText(`${text}-${$("style").value}-${strength.value}-${index}`);
+
+      if (state.mode === "image" && state.sourceImage) {
+        ctx.drawImage(state.sourceImage, 0, 0, width, height);
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.18 + (100 - Number(strength.value)) / 260})`;
+        ctx.fillRect(0, 0, width, height);
+      } else {
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, seededColor(seed, 20));
+        gradient.addColorStop(.52, seededColor(seed, 145));
+        gradient.addColorStop(1, seededColor(seed, 275));
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+      }
+
+      for (let i = 0; i < 18; i += 1) {
+        const x = ((seed + i * 97) % width);
+        const y = ((seed * 3 + i * 131) % height);
+        const radius = 50 + ((seed + i * 43) % 180);
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.06 + (i % 4) * 0.025})`;
+        ctx.fill();
+      }
+
+      ctx.fillStyle = "rgba(0, 0, 0, .22)";
+      ctx.fillRect(0, height - 170, width, 170);
+      ctx.fillStyle = "#fff";
+      ctx.font = `700 ${Math.max(28, Math.round(width / 34))}px "Microsoft YaHei", Arial`;
+      ctx.fillText($("style").value, 44, height - 108);
+      ctx.font = `500 ${Math.max(18, Math.round(width / 52))}px "Microsoft YaHei", Arial`;
+      wrapCanvasText(text, 44, height - 72, width - 88, Math.max(26, Math.round(width / 38)), 2);
+
+      emptyState.classList.add("hidden");
+      canvas.classList.remove("hidden");
+      state.lastDataUrl = canvas.toDataURL("image/png");
+      addHistory(state.lastDataUrl, text);
+    }
+
+    function wrapCanvasText(text, x, y, maxWidth, lineHeight, maxLines) {
+      const chars = Array.from(text);
+      let line = "";
+      let lines = 0;
+      for (const char of chars) {
+        const next = line + char;
+        if (ctx.measureText(next).width > maxWidth && line) {
+          ctx.fillText(line, x, y);
+          y += lineHeight;
+          lines += 1;
+          line = char;
+          if (lines >= maxLines - 1) break;
+        } else {
+          line = next;
+        }
+      }
+      if (line) ctx.fillText(lines >= maxLines - 1 && chars.length > line.length ? `${line}...` : line, x, y);
+    }
+
+    async function requestRemoteGeneration() {
+      const endpoint = $("endpoint").value.trim();
+      if (!endpoint) return false;
+
+      const payload = {
+        mode: state.mode,
+        prompt: prompt.value.trim(),
+        negative_prompt: $("negative").value.trim(),
+        style: $("style").value,
+        ratio: $("ratio").value,
+        strength: Number(strength.value),
+        count: Number($("count").value),
+        model: $("model").value
+      };
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error(`接口返回 ${response.status}`);
+      const data = await response.json();
+      const url = data.image || data.url || data.data?.[0]?.url || data.data?.[0]?.b64_json;
+      if (!url) throw new Error("接口响应里没有找到图片地址");
+      await drawImageFromUrl(url.startsWith("data:") || url.startsWith("http") ? url : `data:image/png;base64,${url}`);
+      addHistory(state.lastDataUrl, payload.prompt);
+      return true;
+    }
+
+    function drawImageFromUrl(url) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.crossOrigin = "anonymous";
+        image.onload = () => {
+          const [width, height] = getCanvasSize();
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(image, 0, 0, width, height);
+          emptyState.classList.add("hidden");
+          canvas.classList.remove("hidden");
+          state.lastDataUrl = canvas.toDataURL("image/png");
+          resolve();
+        };
+        image.onerror = reject;
+        image.src = url;
+      });
+    }
+
+    function addHistory(dataUrl, text) {
+      state.history.unshift({ dataUrl, text, time: new Date().toLocaleTimeString() });
+      state.history = state.history.slice(0, 12);
+      renderHistory();
+    }
+
+    function renderHistory() {
+      thumbs.innerHTML = "";
+      state.history.forEach((item, index) => {
+        const figure = document.createElement("figure");
+        figure.className = "thumb";
+        const image = document.createElement("img");
+        image.src = item.dataUrl;
+        image.alt = item.text;
+        image.addEventListener("click", () => drawImageFromUrl(item.dataUrl));
+        const caption = document.createElement("figcaption");
+        caption.textContent = `${index + 1}. ${item.text || "未命名"} · ${item.time}`;
+        figure.append(image, caption);
+        thumbs.appendChild(figure);
+      });
+    }
+
+    async function generate() {
+      const text = prompt.value.trim();
+      if (!text) {
+        showToast("先写一句提示词");
+        prompt.focus();
+        return;
+      }
+      if (state.mode === "image" && !state.sourceImage) {
+        showToast("图生图需要上传参考图片");
+        return;
+      }
+
+      generateBtn.disabled = true;
+      setStatus("正在生成图像...", "busy");
+      try {
+        const remoteUsed = await requestRemoteGeneration();
+        if (!remoteUsed) {
+          const count = Number($("count").value);
+          for (let i = 0; i < count; i += 1) {
+            await new Promise((resolve) => window.setTimeout(resolve, 220));
+            await drawGeneratedImage(i);
+          }
+        }
+        setStatus("生成完成", "ready");
+        showToast("图像已生成");
+      } catch (error) {
+        setStatus("生成失败", "error");
+        showToast(error.message || "生成失败");
+      } finally {
+        generateBtn.disabled = false;
+      }
+    }
+
+    function loadSourceFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = new Image();
+        image.onload = () => {
+          state.sourceImage = image;
+          sourcePreview.src = reader.result;
+          dropZone.classList.add("has-image");
+          setStatus("参考图片已加载", "ready");
+        };
+        image.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    textTab.addEventListener("click", () => setMode("text"));
+    imageTab.addEventListener("click", () => setMode("image"));
+    prompt.addEventListener("input", () => promptCount.textContent = `${prompt.value.trim().length} 字`);
+    strength.addEventListener("input", (event) => syncStrength(event.target.value));
+    strengthNumber.addEventListener("input", (event) => syncStrength(event.target.value));
+    generateBtn.addEventListener("click", generate);
+    sourceImage.addEventListener("change", (event) => loadSourceFile(event.target.files[0]));
+
+    dropZone.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      dropZone.style.borderColor = "var(--accent)";
+    });
+    dropZone.addEventListener("dragleave", () => dropZone.style.borderColor = "#a7b3c2");
+    dropZone.addEventListener("drop", (event) => {
+      event.preventDefault();
+      dropZone.style.borderColor = "#a7b3c2";
+      loadSourceFile(event.dataTransfer.files[0]);
+    });
+
+    $("downloadBtn").addEventListener("click", () => {
+      if (!state.lastDataUrl) return showToast("还没有可下载的图片");
+      const link = document.createElement("a");
+      link.href = state.lastDataUrl;
+      link.download = `ai-image-${Date.now()}.png`;
+      link.click();
+    });
+
+    $("homeBtn").addEventListener("click", () => {
+      window.location.href = "index.html";
+    });
+
+    $("copyBtn").addEventListener("click", async () => {
+      const text = prompt.value.trim();
+      if (!text) return showToast("没有提示词可复制");
+      await navigator.clipboard.writeText(text);
+      showToast("提示词已复制");
+    });
+
+    $("clearBtn").addEventListener("click", () => {
+      prompt.value = "";
+      $("negative").value = "";
+      promptCount.textContent = "0 字";
+      sourceImage.value = "";
+      sourcePreview.removeAttribute("src");
+      dropZone.classList.remove("has-image");
+      state.sourceImage = null;
+      showToast("已清空输入");
+    });
+
+    $("clearHistory").addEventListener("click", () => {
+      state.history = [];
+      renderHistory();
+      showToast("历史已清空");
+    });
+  </script>
+</body>
+</html>
